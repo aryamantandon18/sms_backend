@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -11,23 +12,27 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from fastapi.middleware.cors import CORSMiddleware
 from bson import ObjectId
+from dotenv import load_dotenv
 
 
 app = FastAPI()
 
-# Database connections
-mongo_client = AsyncIOMotorClient("mongodb://localhost:27017")
-mongo_db = mongo_client["sms_config"]
+load_dotenv()
 
+# MongoDB connection
+mongo_client = AsyncIOMotorClient(os.getenv("MONGO_URL"))
+mongo_db = mongo_client[os.getenv("MONGO_DB")]
+
+# MySQL connection
 mysql_connection = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="aryaman123",
-    database="sms_metrics"
+    host=os.getenv("MYSQL_HOST"),
+    user=os.getenv("MYSQL_USER"),
+    password=os.getenv("MYSQL_PASSWORD"),
+    database=os.getenv("MYSQL_DATABASE")
 )
 
 origins = [
-    "http://localhost:5173"
+    os.getenv("FRONTEND_URI")    
 ]
 app.add_middleware(
     CORSMiddleware,
@@ -136,6 +141,10 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+@app.get("/")
+def working_fine():
+    return{"Status":"API is working"}
 
 # Signup API
 @app.post("/signup")
